@@ -15,7 +15,11 @@ const Login = () => {
     console.log("clicked");
    
     try {
+<<<<<<< HEAD
       const response = await fetch("https://server-yssc.onrender.com/api/login", {
+=======
+      const response = await fetch("https://server-s63i.onrender.com/api/login", {
+>>>>>>> 6a8e9c2556abc2eb0370cb044154aaba2c3973f5
         method: "POST",
         headers: {
           "Content-Type": "application/json",
