@@ -1,40 +1,45 @@
-import React, { useState, useEffect } from "react";
-import { useTimer } from "../TimerContext"; // Make sure to import TimerContext and useTimer
+import React, { useState, useEffect, useContext } from "react";
+import { useTimer } from "../TimerContext";
 import JoinModal from "./JoinModal";
 import NumberModal from "./NumberModal";
-import { ProfileContext, useProfileData } from "../ProfileContext"; // Import ProfileContext and useProfileData
+import { ProfileContext, useProfileData } from "../ProfileContext";
 
-function ColorGame(color) {
+function ColorGame() {
   const { countdown, updateCountdown, results, setResults } = useTimer();
-
-  const { userDetails } = useProfileData(); // Access profile data from the context
-
-  const [userProfile, setUserProfile] = useState(userDetails); // Update userProfile state with userDetails
+  const { userDetails } = useProfileData();
+  const [userProfile, setUserProfile] = useState(userDetails);
 
   useEffect(() => {
-    // Update countdown every second
     const timer = setInterval(() => {
-      updateCountdown({
-        minutes: countdown.minutes,
-        seconds: countdown.seconds === 0 ? 59 : countdown.seconds - 1,
+      updateCountdown((prevCountdown) => {
+        const newSeconds = prevCountdown.seconds === 0 ? 59 : prevCountdown.seconds - 1;
+        const newMinutes = newSeconds === 59 ? prevCountdown.minutes - 1 : prevCountdown.minutes;
+        
+        return { minutes: newMinutes, seconds: newSeconds };
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [countdown, updateCountdown]);
+  }, [updateCountdown]);
 
-  // useEffect(() => {
-  //   if (countdown.minutes === 0 && countdown.seconds === 30) {
-  //     console.log("Disabling buttons...");
+  useEffect(() => {
+    if (countdown.minutes === 0 && countdown.seconds === 0) {
+      fetchResults();
+    }
+  }, [countdown]);
 
-  //     // Disable all buttons when countdown reaches 30 seconds
-  //     setButtonsDisabled(true);
-  //   }
-  //   if (countdown.minutes === 0 && countdown.seconds === 60) {
-  //     // Enable buttons when countdown resets to 60 seconds
-  //     setButtonsDisabled(false);
-  //   }
-  // }, [countdown, setButtonsDisabled]);
+  const fetchResults = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/trade/results");
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const data = await response.json();
+      setResults(data);
+    } catch (error) {
+      console.error("Error fetching results:", error);
+    }
+  };
 
   return (
     <ProfileContext.Provider value={{ userProfile, setUserProfile }}>

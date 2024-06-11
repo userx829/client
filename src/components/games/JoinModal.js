@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useTimer } from "../TimerContext"; // Make sure to import TimerContext and useTimer
+import { useTimer } from "../TimerContext";
 
 const placeBetApiCall = async (betType, betNumber) => {
   try {
@@ -15,7 +15,9 @@ const placeBetApiCall = async (betType, betNumber) => {
     });
 
     if (!response.ok) {
-      throw new Error("Network response was not ok");
+      const errorDetails = await response.text(); // Get the response body text
+      console.error(`Error placing bet: ${response.status} ${response.statusText} - ${errorDetails}`);
+      throw new Error(`Network response was not ok: ${response.status} ${response.statusText} - ${errorDetails}`);
     }
 
     const data = await response.json();
@@ -26,6 +28,7 @@ const placeBetApiCall = async (betType, betNumber) => {
   }
 };
 
+
 const JoinModal = ({ color, className }) => {
   const [showModal, setShowModal] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState(0);
@@ -34,13 +37,9 @@ const JoinModal = ({ color, className }) => {
 
   useEffect(() => {
     if (countdown.minutes === 0 && countdown.seconds === 30) {
-      console.log("Disabling buttons...");
-
-      // Disable all buttons when countdown reaches 30 seconds
       setButtonsDisabled(true);
     }
     if (countdown.minutes === 0 && countdown.seconds === 59) {
-      // Enable buttons when countdown resets to 60 seconds
       setButtonsDisabled(false);
     }
   }, [countdown, setButtonsDisabled]);
@@ -53,10 +52,13 @@ const JoinModal = ({ color, className }) => {
     setShowModal(!showModal);
   };
 
-  const handleConfirm = () => {
-    // Here, you can write code to handle the bet placement
-    console.log(`Placing a bet of ${selectedAmount} on ${color} color`);
-    // Add logic to place the bet, e.g., sending a request to the server
+  const handleConfirm = async () => {
+    try {
+      const result = await placeBetApiCall(`JOIN_${color.toUpperCase()}`, selectedAmount);
+      console.log(`Bet placed: ${result}`);
+    } catch (error) {
+      console.error("Error placing bet:", error);
+    }
   };
 
   const handleAmountSelection = (amount) => {
@@ -69,11 +71,9 @@ const JoinModal = ({ color, className }) => {
         <button
           type="button"
           className={`btn btn-${color} ${className}`}
-          disabled={buttonsDisabled} // Pass disabled prop
+          disabled={buttonsDisabled}
           data-bs-toggle="modal"
-          data-bs-target={`#join${
-            color.charAt(0).toUpperCase() + color.slice(1)
-          }Modal`}
+          data-bs-target={`#join${color.charAt(0).toUpperCase() + color.slice(1)}Modal`}
         >
           Join {color.charAt(0).toUpperCase() + color.slice(1)}
         </button>
@@ -87,67 +87,26 @@ const JoinModal = ({ color, className }) => {
         >
           <div className="modal-dialog modal-dialog-scrollable">
             <div className="modal-content" style={{ width: "auto" }}>
-              <div
-                className={`modal-header bg-${
-                  color === "green"
-                    ? "success"
-                    : color === "blue"
-                    ? "primary"
-                    : "danger"
-                }`}
-              >
-                <h1
-                  className="modal-title fs-2 text-light"
-                  id={`join${color.charAt(0).toUpperCase() + color.slice(1)}`}
-                >
+              <div className={`modal-header bg-${color === "green" ? "success" : color === "blue" ? "primary" : "danger"}`}>
+                <h1 className="modal-title fs-2 text-light" id={`join${color.charAt(0).toUpperCase() + color.slice(1)}`}>
                   Join {color.charAt(0).toUpperCase() + color.slice(1)}
                 </h1>
-                <button
-                  type="button"
-                  className="btn-close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"
-                ></button>
+                <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
-              <div
-                className="modal-body text-dark" // Adjust text color here
-                style={{ height: "400px", overflowX: "auto" }} // Change overflowY to "auto"
-              >
+              <div className="modal-body text-dark" style={{ height: "400px", overflowY: "auto" }}>
                 <div className="container-fluid">
                   <h3>Contract Money</h3>
-                  <div
-                    className="btn-group me-2"
-                    role="group"
-                    aria-label="First group"
-                  >
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => handleAmountSelection(10)}
-                    >
-                      10
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => handleAmountSelection(100)}
-                    >
-                      100
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => handleAmountSelection(1000)}
-                    >
-                      1000
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => handleAmountSelection(10000)}
-                    >
-                      10000
-                    </button>
+                  <div className="btn-group me-2" role="group" aria-label="First group">
+                    {[10, 100, 1000, 10000].map((amount) => (
+                      <button
+                        key={amount}
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={() => handleAmountSelection(amount)}
+                      >
+                        {amount}
+                      </button>
+                    ))}
                   </div>
                   <p>or</p>
                   <h3>Enter Amount</h3>
@@ -157,7 +116,7 @@ const JoinModal = ({ color, className }) => {
                       className="form-control"
                       aria-label="Amount"
                       value={selectedAmount}
-                      onChange={(e) => setSelectedAmount(e.target.value)}
+                      onChange={(e) => setSelectedAmount(Number(e.target.value))}
                     />
                   </div>
                 </div>
@@ -172,32 +131,15 @@ const JoinModal = ({ color, className }) => {
                       checked={isChecked}
                       onChange={handleCheckboxChange}
                     />
-                    <label
-                      className="form-check-label"
-                      htmlFor="flexCheckChecked"
-                    >
+                    <label className="form-check-label" htmlFor="flexCheckChecked">
                       Checked checkbox
                     </label>
                   </div>
                 </div>
               </div>
-
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  data-bs-dismiss="modal"
-                >
-                  Close
-                </button>
-                <button
-                  className="btn btn-primary"
-                  type="button"
-                  onClick={handleConfirm}
-                >
-                  {" "}
-                  Confirm
-                </button>
+                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button className="btn btn-primary" type="button" onClick={handleConfirm}>Confirm</button>
               </div>
             </div>
           </div>

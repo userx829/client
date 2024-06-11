@@ -1,12 +1,23 @@
-import React, { useState, useEffect } from "react";
-import { ProfileContext, useProfileData } from "../ProfileContext";
-import fighterJetImage from "./pngtree-fighter-jet-military-plane-vector-png-image_6457507.png";
-import bladeImage from "./images-removebg-preview.png";
+// Import statements for components
+import {
+  React,
+  useState,
+  useEffect,
+  useRef,
+  ProfileContext,
+  useProfileData,
+  fighterJetImage,
+  bladeImage,
+  bganimation,
+  countdownSound,
+  takeoffSound,
+} from "./CommonImports";
+
 import "./Aviator.css";
 
 function startMultiplying(newRandomTime, setCurrentValue, addResultToHistory) {
   let number = 1;
-  const factor = 1.103;
+  const factor = 2;
 
   function updateNumber() {
     number *= factor;
@@ -41,6 +52,7 @@ const Aviator = () => {
   const [alert, setAlert] = useState(null);
   const [currentValue, setCurrentValue] = useState(1);
   const [betAmount, setBetAmount] = useState(10);
+  const [isCashOut, setIsCashOut] = useState(false);
   const [isBetPlaced, setIsBetPlaced] = useState(false);
   const { userDetails, addUserPoints } = useProfileData();
   const [userProfile, setUserProfile] = useState(userDetails);
@@ -48,25 +60,33 @@ const Aviator = () => {
   const [history, setHistory] = useState([]); // Add history state
   const [betRecords, setBetRecords] = useState([]); // Add betRecords state
 
-  
-  // Fetch bet records from backend
+  useEffect(() => {
+    if (userDetails) {
+      setUserProfile(userDetails);
+    }
+  }, [userDetails]);
+
+  useEffect(() => {
+    if (userProfile && userProfile._id) {
+      fetchBetRecords(userProfile._id);
+    }
+  }, [userProfile]);
   const fetchBetRecords = async (userId) => {
+    if (!userId) {
+      console.error("User ID is undefined in fetchBetRecords");
+      return;
+    }
     try {
-        const response = await fetch(`http://localhost:5000/api/bet-records/${userId}`);
-        const data = await response.json();
-        setBetRecords(data);
+      const response = await fetch(
+        `http://localhost:5000/api/bet-records/${userId}`
+      );
+      const data = await response.json();
+      console.log("Fetched bet records:", data);
+      setBetRecords(data);
     } catch (error) {
-        console.error('Error fetching bet records:', error);
+      console.error("Error fetching bet records:", error);
     }
-};
-
-useEffect(() => {
-    if (userProfile && userProfile.id) {
-        fetchBetRecords(userProfile.id);
-    }
-}, [userProfile]);
-
-
+  };
   // WebSocket connection setup
   useEffect(() => {
     const newWs = new WebSocket("ws://localhost:5000/");
@@ -124,12 +144,14 @@ useEffect(() => {
             document
               .getElementById("fighter-jet-image")
               .classList.add("plane_take_off", "plane_visibility");
-            setIsBetPlaced(false);
+
             break;
           case "countdown-end":
             setTimeout(() => {
               setPlaneTookOff(false);
               setShowCountdown(true);
+              setIsBetPlaced(false);
+              setIsCashOut(false)
               setCountdown(10);
             }, 3000);
             break;
@@ -174,21 +196,21 @@ useEffect(() => {
 
   const placeBet = async () => {
     if (!showCountdown) {
-        console.log("You cannot place a bet while the plane is flying.");
-        return;
+      console.log("You cannot place a bet while the plane is flying.");
+      return;
     }
 
     const initialBetAmount = parseFloat(betAmount);
     if (
-        isNaN(initialBetAmount) ||
-        initialBetAmount <= 0 ||
-        initialBetAmount > userProfile.points
+      isNaN(initialBetAmount) ||
+      initialBetAmount <= 9 ||
+      initialBetAmount > userProfile.points
     ) {
-        setAlert("Invalid bet amount or insufficient points");
-        setTimeout(() => {
-            setAlert(null);
-        }, 4000);
-        return;
+      setAlert("Invalid bet amount or insufficient points");
+      setTimeout(() => {
+        setAlert(null);
+      }, 4000);
+      return;
     }
 
     setBetAmount(initialBetAmount);
@@ -198,89 +220,118 @@ useEffect(() => {
     setAlert("Bet placed successfully!");
     await addUserPoints(-initialBetAmount);
     setTimeout(() => {
-        setAlert(null);
+      setAlert(null);
     }, 2000);
+  };
 
-    // Add bet record to the backend
-    await fetch('http://localhost:5000/api/bet-records', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            user_id: userProfile.id,
-            bet_amount: initialBetAmount,
-            multiplier: 1,
-            cashout_amount: 0
-        })
-    });
-};
-
-const cashOut = async () => {
+  const cashOut = async () => {
     if (isBetPlaced && !planeTookOff) {
-        const parsedCurrentValue = parseFloat(currentValue);
-        const parsedBetAmount = parseFloat(betAmount);
+      const parsedCurrentValue = parseFloat(currentValue);
+      const parsedBetAmount = parseFloat(betAmount);
 
-        if (isNaN(parsedCurrentValue)) {
-            console.error("Invalid multiplier");
-            return;
-        }
+      if (isNaN(parsedCurrentValue)) {
+        console.error("Invalid multiplier");
+        return;
+      }
 
-        if (isNaN(parsedBetAmount)) {
-            console.error("Invalid bet amount");
-            return;
-        }
+      if (isNaN(parsedBetAmount)) {
+        console.error("Invalid bet amount");
+        return;
+      }
 
-        const calculatedWinningAmount = parsedCurrentValue * parsedBetAmount;
-        setWinningAmount(calculatedWinningAmount);
+      let calculatedWinningAmount = parsedCurrentValue * parsedBetAmount;
+      calculatedWinningAmount = parseFloat(calculatedWinningAmount.toFixed(2)); // Round to two decimal places
 
-        console.log("This is the current value of cashout", parsedCurrentValue);
-        console.log(
-            "This is the winningAmount value of cashout",
-            calculatedWinningAmount
-        );
+      setWinningAmount(calculatedWinningAmount);
 
-        const updatedPoints = userProfile.points + calculatedWinningAmount;
-        setUserProfile({ ...userProfile, points: updatedPoints });
+      const updatedPoints = parseFloat(
+        (userProfile.points + calculatedWinningAmount).toFixed(2)
+      ); // Round to two decimal places
+      setUserProfile({ ...userProfile, points: updatedPoints });
 
-        console.log(
-            "This is the updated user profile points",
-            updatedPoints,
-            "bet amount:",
-            parsedBetAmount,
-            "multiplier:",
-            parsedCurrentValue
-        );
+      await addUserPoints(calculatedWinningAmount);
 
-        await addUserPoints(calculatedWinningAmount);
+      setBetAmount(10);
+      setIsBetPlaced(false);
+      setIsCashOut(true); // Set cash out state to true
 
-        setBetAmount(0);
-        setIsBetPlaced(false);
+      try {
+        console.log("Cashing out for user:", userProfile._id);
 
-        // Update bet record to the backend
-        await fetch('http://localhost:5000/api/bet-records', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                user_id: userProfile.id,
+        const response = await fetch("http://localhost:5000/api/bet-records", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: userProfile._id,
+            bet_amount: parsedBetAmount,
+            multiplier: parsedCurrentValue,
+            cashout_amount: calculatedWinningAmount,
+          }),
+        });
+        const data = await response.json();
+        console.log("Cashout record added:", data); // Log response
+
+        // Fetch updated bet records
+        fetchBetRecords(userProfile._id);
+      } catch (error) {
+        console.error("Error cashing out:", error);
+      }
+    } else {
+      setAlert("Cannot cash out after the plane has flown away");
+      setTimeout(() => {
+        setAlert(null);
+      }, 2000);
+    }
+  };
+
+  useEffect(() => {
+    const addBetRecord = async () => {
+      console.log(
+        "Inside addBetRecord. isBetPlaced:",
+        isBetPlaced,
+        "planeTookOff:",
+        planeTookOff,
+        "isCashOut:",
+        isCashOut
+      );
+      if (isBetPlaced && planeTookOff && !isCashOut) {
+        try {
+          const parsedCurrentValue = parseFloat(currentValue);
+          const parsedBetAmount = parseFloat(betAmount);
+          console.log("Cashing out for user:", userProfile._id);
+
+          const response = await fetch(
+            "http://localhost:5000/api/bet-records",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                user_id: userProfile._id,
                 bet_amount: parsedBetAmount,
                 multiplier: parsedCurrentValue,
-                cashout_amount: calculatedWinningAmount
-            })
-        });
-    } else {
-        setAlert("Cannot cash out after the plane has flown away");
-        setTimeout(() => {
-            setAlert(null);
-        }, 2000);
-    }
-};
+                cashout_amount: 0,
+              }),
+            }
+          );
+          const data = await response.json();
+          console.log("Cashout record added:", data); // Log response
 
+          // Fetch updated bet records
+          fetchBetRecords(userProfile._id);
+        } catch (error) {
+          console.error("Error cashing out:", error);
+        }
+      }
+    };
+
+    addBetRecord();
+  }, [isBetPlaced, isCashOut, planeTookOff]);
 
   const isJetFlying = !showCountdown;
-
   const addResultToHistory = (result) => {
     setHistory((prevHistory) => {
       const newHistory = [...prevHistory, result];
@@ -400,7 +451,17 @@ const cashOut = async () => {
             </div>
           </div>
           <div className="card-header">Featured</div>
-          <div className="card-body bg-dark" style={{ height: "500px" }}>
+          <div
+            className={`card-body bg-dark ${
+              !showCountdown && !planeTookOff ? "bg-animation" : ""
+            }`}
+            style={{
+              height: "500px",
+              backgroundImage: `url(${bganimation})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
             <div className="container-sm">
               {showCountdown && ( // Render the blade image and countdown only if showCountdown is true
                 <>
@@ -457,7 +518,10 @@ const cashOut = async () => {
                 type="button"
                 onClick={cashOut} // Add onClick event handler for cashing out
               >
-                <div>Current Winning Amount: {winningAmount.toFixed(2)}</div>
+                <div>
+                  Cash Amount: <br />
+                  {winningAmount.toFixed(2)}
+                </div>
               </button>
             )}
           </div>
@@ -519,32 +583,44 @@ const cashOut = async () => {
           </div>
           <div className="card-footer text-body-secondary my-3">My Record</div>
           <table className="table">
-        <thead>
-          <tr>
-            <th scope="col">Period</th>
-            <th scope="col">Bet</th>
-            <th scope="col">Multi.</th>
-            <th scope="col">Cashout</th>
-          </tr>
-        </thead>
-        <tbody>
-          {betRecords.length > 0 ? (
-            betRecords.map((record, index) => (
-              <tr key={index}>
-                <td>{record.period}</td>
-                <td>{record.bet}</td>
-                <td>{record.multiplier}</td>
-                <td>{record.cashout}</td>
+            <thead>
+              <tr>
+                <th scope="col">Period</th>
+                <th scope="col">Bet</th>
+                <th scope="col">Multi.</th>
+                <th scope="col">Cashout</th>
               </tr>
-            ))
-          )
-           : (
-            <tr>
-              <td colSpan="4">No records available</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {betRecords.length > 0 ? (
+                betRecords.map((record, index) => {
+                  function formatDate(date) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, "0");
+                    const day = String(date.getDate()).padStart(2, "0");
+                    const hours = String(date.getHours()).padStart(2, "0");
+                    const minutes = String(date.getMinutes()).padStart(2, "0");
+                    return `${year}${month}${day}${hours}${minutes}`;
+                  }
+
+                  const createdAtDate = new Date(record.createdAt);
+                  const formattedDate = formatDate(createdAtDate);
+                  return (
+                    <tr key={index}>
+                      <td>{formattedDate}</td>
+                      <td>{record.bet_amount}</td>
+                      <td>{record.multiplier}</td>
+                      <td>{record.cashout_amount}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="4">No bet records found</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </>
     </ProfileContext.Provider>
