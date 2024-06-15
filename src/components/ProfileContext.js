@@ -22,7 +22,7 @@ export const ProfileProvider = ({ children }) => {
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/profile", {
+        const response = await fetch(`${process.env.REACT_APP_PROFILE_URL}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -62,7 +62,7 @@ export const ProfileProvider = ({ children }) => {
 
   const addUserPoints = async (pointsToAdd) => {
     try {
-      const response = await fetch("http://localhost:5000/api/update-points", {
+      const response = await fetch(`${process.env.REACT_APP_UPDATE_POINTS_URL}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

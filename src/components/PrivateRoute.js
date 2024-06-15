@@ -13,7 +13,7 @@ export const PrivateRoute = () => {
             return;
         }
 
-        fetch('http://localhost:5000/api/profile', {
+        fetch(`${process.env.REACT_APP_PROFILE_URL}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -46,4 +46,4 @@ export const PrivateRoute = () => {
             )}
         </div>
     );
-}
+};

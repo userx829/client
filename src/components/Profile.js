@@ -10,7 +10,7 @@ const Profile = () => {
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/profile", {
+        const response = await fetch(`${process.env.REACT_APP_PROFILE_URL}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -60,7 +60,7 @@ const Profile = () => {
           </button>
         </div>
       </nav>
-      <div className="card  ">
+      <div className="card">
         <div className="card-header bg-info-subtle">
           <h5>User Details</h5>
         </div>
@@ -74,7 +74,7 @@ const Profile = () => {
                 Available Points: {userDetails.points}
                 {/* Display available points */}
               </>
-            )}{" "}
+            )}
           </p>
         </div>
       </div>
@@ -126,7 +126,7 @@ const Profile = () => {
               aria-expanded="false"
               aria-controls="flush-collapseTwo"
             >
-              Support & Contact{" "}
+              Support & Contact
             </button>
           </h2>
           <div

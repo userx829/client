@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from './AuthContext';
+import { useAuth } from "./AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -13,13 +13,9 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("clicked");
-   
+
     try {
-<<<<<<< HEAD
-      const response = await fetch("https://server-yssc.onrender.com/api/login", {
-=======
-      const response = await fetch("https://server-s63i.onrender.com/api/login", {
->>>>>>> 6a8e9c2556abc2eb0370cb044154aaba2c3973f5
+      const response = await fetch(`${process.env.REACT_APP_LOGIN_URL}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -29,7 +25,7 @@ const Login = () => {
           password,
         }),
       });
-  
+
       if (!response.ok) {
         throw new Error(response.statusText);
       }
@@ -79,10 +75,7 @@ const Login = () => {
                   </div>
                 </div>
                 <div className="mb-3">
-                  <label
-                    htmlFor="exampleInputPassword1"
-                    className="form-label"
-                  >
+                  <label htmlFor="exampleInputPassword1" className="form-label">
                     Password
                   </label>
                   <input
