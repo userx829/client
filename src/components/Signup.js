@@ -12,7 +12,7 @@ const Signup = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_SIGNUP_URl}`, {
+      const response = await fetch(`${process.env.REACT_APP_SIGNUP_URL}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
