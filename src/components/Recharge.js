@@ -48,7 +48,7 @@ const Recharge = () => {
       </div>
       <div className="container d-flex flex-column justify-content-center align-items-center">
         <span className="mb-3">
-          Any problem? Contact patelamara83@gmail.com
+          Any problem? Contact 
         </span>
         <h3>Balance:</h3>
         <input

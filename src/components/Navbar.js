@@ -1,3 +1,4 @@
+// src/components/Navbar.js
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -8,13 +9,10 @@ function Navbar() {
         {`
           .nav-link:hover .fa-solid {
             color: black; /* Change color on hover */
-          
-            
           }
           .nav-link:hover div {
             color: black; /* Change color on hover */
           }
-
           @media (max-width: 576px) {
             .nav-link {
               font-size: 0.75rem; /* Decrease font size for small devices */

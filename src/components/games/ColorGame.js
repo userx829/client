@@ -2,6 +2,8 @@ import React, { useState, useEffect, useContext } from "react";
 import { useTimer } from "../TimerContext";
 import JoinModal from "./JoinModal";
 import NumberModal from "./NumberModal";
+import "./Aviator.css";
+
 import { ProfileContext, useProfileData } from "../ProfileContext";
 
 function ColorGame() {

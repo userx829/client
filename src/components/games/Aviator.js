@@ -17,11 +17,13 @@ import "./Aviator.css";
 
 function startMultiplying(newRandomTime, setCurrentValue, addResultToHistory) {
   let number = 1;
-  const factor = 2;
+  let factor = 1.04; // Start with a small factor value
 
   function updateNumber() {
     number *= factor;
     setCurrentValue(parseFloat(number.toFixed(2)));
+    // Increase the factor slowly
+    // factor += 0.001; // Adjust this value to control the rate of increase
   }
 
   updateNumber();
@@ -136,6 +138,8 @@ const Aviator = () => {
             );
             break;
           case "countdown-nearing-end":
+            break;
+          case "countdown-end":
             setShowCountdown(false);
             setPlaneTookOff(true);
             document
@@ -145,13 +149,11 @@ const Aviator = () => {
               .getElementById("fighter-jet-image")
               .classList.add("plane_take_off", "plane_visibility");
 
-            break;
-          case "countdown-end":
             setTimeout(() => {
               setPlaneTookOff(false);
               setShowCountdown(true);
               setIsBetPlaced(false);
-              setIsCashOut(false)
+              setIsCashOut(false);
               setCountdown(10);
             }, 3000);
             break;
@@ -342,19 +344,18 @@ const Aviator = () => {
   return (
     <ProfileContext.Provider value={{ userProfile, setUserProfile }}>
       <>
-        <div className="container-fluid py-3 bg-info d-flex justify-content-between">
+        <div className="container-fluid py-3 bg-info d-flex justify-content-between resp-container">
           <div className="container-fluid py-3 d-flex justify-content-between">
             <div className="container-sm d-flex justify-content-start">
               <a className="navbar-brand" href="#">
                 Logo
               </a>
             </div>
-            <div className="container-sm  d-flex justify-content-around">
+            <div className="container-sm d-flex justify-content-around resp-container">
               <a className="navbar-brand" href="#">
                 {userProfile && (
                   <>
                     <h5> Available Points: {userProfile.points} </h5>
-                    {/* Display available points */}
                   </>
                 )}
               </a>
@@ -452,7 +453,7 @@ const Aviator = () => {
           </div>
           <div className="card-header">Featured</div>
           <div
-            className={`card-body bg-dark ${
+            className={`card-body bg-dark resp-aviator ${
               !showCountdown && !planeTookOff ? "bg-animation" : ""
             }`}
             style={{
@@ -556,19 +557,6 @@ const Aviator = () => {
                   />
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn btn-secondary px-5 py-2 my-3 mx-3  "
-              >
-                <i className="fa-solid fa-minus"></i>
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-secondary px-5 py-2 my-3"
-              >
-                <i className="fa-solid fa-plus"></i>
-              </button>
             </div>
             <div className="d-grid gap-1">
               <button

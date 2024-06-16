@@ -1,16 +1,29 @@
-import React, { useState, useEffect } from "react";
-import { ProfileContext, useProfileData } from "../ProfileContext";
-import fighterJetImage from "./pngtree-fighter-jet-military-plane-vector-png-image_6457507.png";
-import bladeImage from "./images-removebg-preview.png";
+// Import statements for components
+import {
+  React,
+  useState,
+  useEffect,
+  useRef,
+  ProfileContext,
+  useProfileData,
+  fighterJetImage,
+  bladeImage,
+  bganimation,
+  countdownSound,
+  takeoffSound,
+} from "./CommonImports";
+
 import "./Aviator.css";
 
 function startMultiplying(newRandomTime, setCurrentValue, addResultToHistory) {
   let number = 1;
-  const factor = 1.103;
+  let factor = 1.04; // Start with a small factor value
 
   function updateNumber() {
     number *= factor;
     setCurrentValue(parseFloat(number.toFixed(2)));
+    // Increase the factor slowly
+    // factor += 0.001; // Adjust this value to control the rate of increase
   }
 
   updateNumber();
@@ -41,12 +54,41 @@ const Aviator = () => {
   const [alert, setAlert] = useState(null);
   const [currentValue, setCurrentValue] = useState(1);
   const [betAmount, setBetAmount] = useState(10);
+  const [isCashOut, setIsCashOut] = useState(false);
   const [isBetPlaced, setIsBetPlaced] = useState(false);
   const { userDetails, addUserPoints } = useProfileData();
   const [userProfile, setUserProfile] = useState(userDetails);
   const [winningAmount, setWinningAmount] = useState(0);
   const [history, setHistory] = useState([]); // Add history state
+  const [betRecords, setBetRecords] = useState([]); // Add betRecords state
 
+  useEffect(() => {
+    if (userDetails) {
+      setUserProfile(userDetails);
+    }
+  }, [userDetails]);
+
+  useEffect(() => {
+    if (userProfile && userProfile._id) {
+      fetchBetRecords(userProfile._id);
+    }
+  }, [userProfile]);
+  const fetchBetRecords = async (userId) => {
+    if (!userId) {
+      console.error("User ID is undefined in fetchBetRecords");
+      return;
+    }
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/bet-records/${userId}`
+      );
+      const data = await response.json();
+      console.log("Fetched bet records:", data);
+      setBetRecords(data);
+    } catch (error) {
+      console.error("Error fetching bet records:", error);
+    }
+  };
   // WebSocket connection setup
   useEffect(() => {
     const newWs = new WebSocket("ws://localhost:5000/");
@@ -96,6 +138,8 @@ const Aviator = () => {
             );
             break;
           case "countdown-nearing-end":
+            break;
+          case "countdown-end":
             setShowCountdown(false);
             setPlaneTookOff(true);
             document
@@ -104,12 +148,12 @@ const Aviator = () => {
             document
               .getElementById("fighter-jet-image")
               .classList.add("plane_take_off", "plane_visibility");
-            setIsBetPlaced(false);
-            break;
-          case "countdown-end":
+
             setTimeout(() => {
               setPlaneTookOff(false);
               setShowCountdown(true);
+              setIsBetPlaced(false);
+              setIsCashOut(false);
               setCountdown(10);
             }, 3000);
             break;
@@ -161,7 +205,7 @@ const Aviator = () => {
     const initialBetAmount = parseFloat(betAmount);
     if (
       isNaN(initialBetAmount) ||
-      initialBetAmount <= 0 ||
+      initialBetAmount <= 9 ||
       initialBetAmount > userProfile.points
     ) {
       setAlert("Invalid bet amount or insufficient points");
@@ -197,31 +241,45 @@ const Aviator = () => {
         return;
       }
 
-      const calculatedWinningAmount = parsedCurrentValue * parsedBetAmount;
+      let calculatedWinningAmount = parsedCurrentValue * parsedBetAmount;
+      calculatedWinningAmount = parseFloat(calculatedWinningAmount.toFixed(2)); // Round to two decimal places
+
       setWinningAmount(calculatedWinningAmount);
 
-      console.log("This is the current value of cashout", parsedCurrentValue);
-      console.log(
-        "This is the winningAmount value of cashout",
-        calculatedWinningAmount
-      );
-
-      const updatedPoints = userProfile.points + calculatedWinningAmount;
+      const updatedPoints = parseFloat(
+        (userProfile.points + calculatedWinningAmount).toFixed(2)
+      ); // Round to two decimal places
       setUserProfile({ ...userProfile, points: updatedPoints });
-
-      console.log(
-        "This is the updated user profile points",
-        updatedPoints,
-        "bet amount:",
-        parsedBetAmount,
-        "multiplier:",
-        parsedCurrentValue
-      );
 
       await addUserPoints(calculatedWinningAmount);
 
-      setBetAmount(0);
+      setBetAmount(10);
       setIsBetPlaced(false);
+      setIsCashOut(true); // Set cash out state to true
+
+      try {
+        console.log("Cashing out for user:", userProfile._id);
+
+        const response = await fetch("http://localhost:5000/api/bet-records", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: userProfile._id,
+            bet_amount: parsedBetAmount,
+            multiplier: parsedCurrentValue,
+            cashout_amount: calculatedWinningAmount,
+          }),
+        });
+        const data = await response.json();
+        console.log("Cashout record added:", data); // Log response
+
+        // Fetch updated bet records
+        fetchBetRecords(userProfile._id);
+      } catch (error) {
+        console.error("Error cashing out:", error);
+      }
     } else {
       setAlert("Cannot cash out after the plane has flown away");
       setTimeout(() => {
@@ -230,8 +288,52 @@ const Aviator = () => {
     }
   };
 
-  const isJetFlying = !showCountdown;
+  useEffect(() => {
+    const addBetRecord = async () => {
+      console.log(
+        "Inside addBetRecord. isBetPlaced:",
+        isBetPlaced,
+        "planeTookOff:",
+        planeTookOff,
+        "isCashOut:",
+        isCashOut
+      );
+      if (isBetPlaced && planeTookOff && !isCashOut) {
+        try {
+          const parsedCurrentValue = parseFloat(currentValue);
+          const parsedBetAmount = parseFloat(betAmount);
+          console.log("Cashing out for user:", userProfile._id);
 
+          const response = await fetch(
+            "http://localhost:5000/api/bet-records",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                user_id: userProfile._id,
+                bet_amount: parsedBetAmount,
+                multiplier: parsedCurrentValue,
+                cashout_amount: 0,
+              }),
+            }
+          );
+          const data = await response.json();
+          console.log("Cashout record added:", data); // Log response
+
+          // Fetch updated bet records
+          fetchBetRecords(userProfile._id);
+        } catch (error) {
+          console.error("Error cashing out:", error);
+        }
+      }
+    };
+
+    addBetRecord();
+  }, [isBetPlaced, isCashOut, planeTookOff]);
+
+  const isJetFlying = !showCountdown;
   const addResultToHistory = (result) => {
     setHistory((prevHistory) => {
       const newHistory = [...prevHistory, result];
@@ -242,23 +344,22 @@ const Aviator = () => {
   return (
     <ProfileContext.Provider value={{ userProfile, setUserProfile }}>
       <>
-        <div className="container-fluid py-3 bg-info d-flex justify-content-between">
+        <div className="container-fluid py-3 bg-info d-flex justify-content-between resp-container">
           <div className="container-fluid py-3 d-flex justify-content-between">
             <div className="container-sm d-flex justify-content-start">
               <a className="navbar-brand" href="#">
                 Logo
               </a>
             </div>
-            <div className="container-sm  d-flex justify-content-around">
+            <div className="container-sm d-flex justify-content-around resp-container">
               <a className="navbar-brand" href="#">
                 {userProfile && (
                   <>
                     <h5> Available Points: {userProfile.points} </h5>
-                    {/* Display available points */}
                   </>
                 )}
               </a>
-              <a className="navbar-brand" href="#">
+              <a className="navbar-brand" href="/recharge">
                 <button type="button" className="btn btn-outline-primary">
                   Add Points
                 </button>
@@ -351,7 +452,17 @@ const Aviator = () => {
             </div>
           </div>
           <div className="card-header">Featured</div>
-          <div className="card-body bg-dark" style={{ height: "500px" }}>
+          <div
+            className={`card-body bg-dark resp-aviator ${
+              !showCountdown && !planeTookOff ? "bg-animation" : ""
+            }`}
+            style={{
+              height: "500px",
+              backgroundImage: `url(${bganimation})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
             <div className="container-sm">
               {showCountdown && ( // Render the blade image and countdown only if showCountdown is true
                 <>
@@ -408,7 +519,10 @@ const Aviator = () => {
                 type="button"
                 onClick={cashOut} // Add onClick event handler for cashing out
               >
-                <div>Current Winning Amount: {winningAmount.toFixed(2)}</div>
+                <div>
+                  Cash Amount: <br />
+                  {winningAmount.toFixed(2)}
+                </div>
               </button>
             )}
           </div>
@@ -443,19 +557,6 @@ const Aviator = () => {
                   />
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn btn-secondary px-5 py-2 my-3 mx-3  "
-              >
-                <i className="fa-solid fa-minus"></i>
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-secondary px-5 py-2 my-3"
-              >
-                <i className="fa-solid fa-plus"></i>
-              </button>
             </div>
             <div className="d-grid gap-1">
               <button
@@ -470,32 +571,44 @@ const Aviator = () => {
           </div>
           <div className="card-footer text-body-secondary my-3">My Record</div>
           <table className="table">
-        <thead>
-          <tr>
-            <th scope="col">Period</th>
-            <th scope="col">Bet</th>
-            <th scope="col">Multi.</th>
-            <th scope="col">Cashout</th>
-          </tr>
-        </thead>
-        {/* <tbody>
-          {betRecords.length > 0 ? (
-            betRecords.map((record, index) => (
-              <tr key={index}>
-                <td>{record.period}</td>
-                <td>{record.bet}</td>
-                <td>{record.multiplier}</td>
-                <td>{record.cashout}</td>
+            <thead>
+              <tr>
+                <th scope="col">Period</th>
+                <th scope="col">Bet</th>
+                <th scope="col">Multi.</th>
+                <th scope="col">Cashout</th>
               </tr>
-            ))
-          )
-           : (
-            <tr>
-              <td colSpan="4">No records available</td>
-            </tr>
-          )}
-        </tbody> */}
-      </table>
+            </thead>
+            <tbody>
+              {betRecords.length > 0 ? (
+                betRecords.map((record, index) => {
+                  function formatDate(date) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, "0");
+                    const day = String(date.getDate()).padStart(2, "0");
+                    const hours = String(date.getHours()).padStart(2, "0");
+                    const minutes = String(date.getMinutes()).padStart(2, "0");
+                    return `${year}${month}${day}${hours}${minutes}`;
+                  }
+
+                  const createdAtDate = new Date(record.createdAt);
+                  const formattedDate = formatDate(createdAtDate);
+                  return (
+                    <tr key={index}>
+                      <td>{formattedDate}</td>
+                      <td>{record.bet_amount}</td>
+                      <td>{record.multiplier}</td>
+                      <td>{record.cashout_amount}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="4">No bet records found</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </>
     </ProfileContext.Provider>

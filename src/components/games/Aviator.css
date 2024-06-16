@@ -1,4 +1,7 @@
 /* Aviator.css */
+*{
+  overflow-x: hidden;
+}
 .card-body {
   position: relative;
   overflow: hidden; /* Hide overflow content */
@@ -63,31 +66,31 @@
 @keyframes flying {
   0% {
     top: 20%;
-    left: 65%;
+    left: 50%;
   }
   15% {
     top: 30%;
-    left: 70%;
+    left: 55%;
   }
   30% {
     top: 10%;
-    left: 68%;
+    left: 52%;
   }
   50% {
     top: 30%;
-    left: 70%;
+    left: 51%;
   }
   70% {
     top: 10%;
-    left: 68%;
+    left: 50%;
   }
   85% {
     top: 30%;
-    left: 70%;
+    left: 52%;
   }
   to {
     top: 10%;
-    left: 68%;
+    left: 62%;
   }
 }
 
@@ -134,4 +137,48 @@
 .bg-animation {
   animation: moveBackground 1s linear infinite;
   background-repeat: repeat-x;
+}
+
+.Modal-btn {
+  height: 4vw;
+  width: 9vw;
+  margin: 1vw;
+}
+
+.btn-info {
+  height: 4vw;
+  width: 9vw;
+  margin: 1vw;
+}
+
+@media (max-width: 576px) {
+  .btn-info {
+    height: 5vh;
+    width: 11vw;
+    margin: 3vw;
+  }
+  .Modal-btn {
+    height: 10vw;
+    width: 26vw;
+  }
+  .modal-body {
+    font-size: 13px;
+  }
+}
+
+
+@media (max-width: 576px) {
+  .resp-aviator {
+    height: 300px !important; 
+    
+  }
+  .resp-container {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: wrap;
+     justify-content: center;
+ }
+ .fighter-jet-image{
+  width: 34vw !important;
+ }
 }
