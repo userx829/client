@@ -337,7 +337,7 @@ const Aviator = () => {
   const addResultToHistory = (result) => {
     setHistory((prevHistory) => {
       const newHistory = [...prevHistory, result];
-      return newHistory.slice(-15); // Keep only the last 15 elements
+      return newHistory.slice(-10); // Keep only the last 15 elements
     });
   };
 
@@ -355,7 +355,9 @@ const Aviator = () => {
               <a className="navbar-brand" href="#">
                 {userProfile && (
                   <>
-                    <h5> Available Points: {userProfile.points} </h5>
+                    <span className="fs-5 text fw-semibold">
+                      Available Points: {userProfile.points}{" "}
+                    </span>
                   </>
                 )}
               </a>
@@ -432,7 +434,7 @@ const Aviator = () => {
                     aria-expanded="false"
                     aria-controls="collapseTwo"
                   >
-                    <strong>History</strong>
+                    History
                   </button>
                 </h2>
                 <div
@@ -484,9 +486,7 @@ const Aviator = () => {
                 </>
               )}
               {planeTookOff && ( // Render the message when the plane takes off
-                <span className="text-warning fs-1 text">
-                  <h2> Flew Away</h2>
-                </span>
+                <span className="text-warning fs-1 text">Flew Away</span>
               )}
               {!showCountdown && (
                 <div className="countdown-container">
