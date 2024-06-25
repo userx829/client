@@ -80,7 +80,7 @@ const Aviator = () => {
     }
     try {
       const response = await fetch(
-        `http://localhost:5000/api/bet-records/${userId}`
+        `${process.env.REACT_APP_BETRECORDS_URL}/${userId}`
       );
       const data = await response.json();
       console.log("Fetched bet records:", data);
@@ -89,28 +89,30 @@ const Aviator = () => {
       console.error("Error fetching bet records:", error);
     }
   };
+  
   // WebSocket connection setup
   useEffect(() => {
-    const newWs = new WebSocket("ws://localhost:5000/");
+    const newWs = new WebSocket(process.env.REACT_APP_WEBSOCKET_URL);
     setWs(newWs);
-
+  
     newWs.onmessage = (event) => {
       const message = event.data;
       handleMessage(message);
     };
-
+  
     newWs.onclose = () => {
       console.log("WebSocket closed, attempting to reconnect...");
       // Attempt to reconnect
       setTimeout(() => {
-        setWs(new WebSocket("ws://localhost:5000/"));
+        setWs(new WebSocket(process.env.REACT_APP_WEBSOCKET_URL));
       }, 5000);
     };
-
+  
     return () => {
       newWs.close();
     };
   }, []);
+  
 
   useEffect(() => {
     if (randomTimes.length > 0) {

@@ -32,8 +32,9 @@ const LoginRoute = () => {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider> {/* Ensure AuthProvider wraps your application */}
+    <Router basename={process.env.PUBLIC_URL}>
+      <AuthProvider>
+        {/* Ensure AuthProvider wraps your application */}
         <ProfileProvider>
           <div className="App">
             <Navbar />
