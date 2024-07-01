@@ -1,5 +1,5 @@
 import React, {useEffect, useState } from "react";
-import { useTimer } from "../TimerContext"; // Make sure to import TimerContext and useTimer
+import { useTimer } from "../context/TimerContext"; // Make sure to import TimerContext and useTimer
 
 
 const NumberModal = ({ number }) => {

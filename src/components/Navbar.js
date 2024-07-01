@@ -53,7 +53,7 @@ function Navbar() {
             </Link>
           </li>
           <li className="nav-item">
-            <Link className="nav-link" to="/color">
+            <Link className="nav-link" to="/sports">
               <i
                 className="fa-solid fa-baseball-bat-ball"
                 style={{ fontSize: "20px" }}

@@ -1,618 +1,335 @@
-// Import statements for components
-import {
-  React,
-  useState,
-  useEffect,
-  useRef,
-  ProfileContext,
-  useProfileData,
-  fighterJetImage,
-  bladeImage,
-  bganimation,
-  countdownSound,
-  takeoffSound,
-} from "./CommonImports";
+import React, { useState, useEffect } from "react";
+import { useProfileData, ProfileContext } from "./CommonImports";
+import Navbar_s from "./Navbar_s";
+import "./color.css";
 
-import "./Aviator.css";
-
-function startMultiplying(newRandomTime, setCurrentValue, addResultToHistory) {
-  let number = 1;
-  let factor = 1.04; // Start with a small factor value
-
-  function updateNumber() {
-    number *= factor;
-    setCurrentValue(parseFloat(number.toFixed(2)));
-    // Increase the factor slowly
-    // factor += 0.001; // Adjust this value to control the rate of increase
-  }
-
-  updateNumber();
-
-  let seconds = newRandomTime;
-  let numseconds = 0;
-  const intervalId = setInterval(() => {
-    if (numseconds < seconds) {
-      updateNumber();
-      numseconds++;
-    } else {
-      clearInterval(intervalId);
-      const result = number.toFixed(2);
-      console.log("Final Result:", result);
-      addResultToHistory(result); // Call the callback to update history
-    }
-  }, 500);
-  return { time: newRandomTime, value: number.toFixed(2) };
-}
-
-const Aviator = () => {
-  const [countdown, setCountdown] = useState(10);
-  const [showCountdown, setShowCountdown] = useState(true);
-  const [randomTimes, setRandomTimes] = useState([]);
-  const [randomTimeCountdown, setRandomTimeCountdown] = useState(null);
-  const [planeTookOff, setPlaneTookOff] = useState(false);
-  const [ws, setWs] = useState(null);
-  const [alert, setAlert] = useState(null);
-  const [currentValue, setCurrentValue] = useState(1);
-  const [betAmount, setBetAmount] = useState(10);
-  const [isCashOut, setIsCashOut] = useState(false);
-  const [isBetPlaced, setIsBetPlaced] = useState(false);
+const Color = () => {
   const { userDetails, addUserPoints } = useProfileData();
   const [userProfile, setUserProfile] = useState(userDetails);
-  const [winningAmount, setWinningAmount] = useState(0);
-  const [history, setHistory] = useState([]); // Add history state
-  const [betRecords, setBetRecords] = useState([]); // Add betRecords state
+  const [selectedBox, setSelectedBox] = useState(null);
+  const [betAmount, setBetAmount] = useState(10);
+  const [isBetPlaced, setIsBetPlaced] = useState(false);
+  const [alertMessage, setAlertMessage] = useState(null); // State for alert message
+  const [isCheckButtonEnabled, setIsCheckButtonEnabled] = useState(false);
+  const [betRecords, setBetRecords] = useState([]); // State for bet records
+  const [isPlaceBetButtonDisabled, setIsPlaceBetButtonDisabled] =
+    useState(false); // State to manage "Place Bet" button disabled state
 
+  const gameType = "colorGame"; // Set the game type
+
+  // Effect to fetch bet records when userProfile or gameType changes
   useEffect(() => {
-    if (userDetails) {
-      setUserProfile(userDetails);
-    }
-  }, [userDetails]);
+    console.log("userProfile:", userProfile);
+    console.log("gameType:", gameType);
 
-  useEffect(() => {
-    if (userProfile && userProfile._id) {
-      fetchBetRecords(userProfile._id);
-    }
-  }, [userProfile]);
-  const fetchBetRecords = async (userId) => {
-    if (!userId) {
-      console.error("User ID is undefined in fetchBetRecords");
-      return;
-    }
-    try {
-      const response = await fetch(
-        `http://localhost:5000/api/bet-records/${userId}`
-      );
-      const data = await response.json();
-      console.log("Fetched bet records:", data);
-      setBetRecords(data);
-    } catch (error) {
-      console.error("Error fetching bet records:", error);
-    }
-  };
-  // WebSocket connection setup
-  useEffect(() => {
-    const newWs = new WebSocket("ws://localhost:5000/");
-    setWs(newWs);
+    const fetchBetRecords = async () => {
+      if (!userProfile || !userProfile._id) return;
 
-    newWs.onmessage = (event) => {
-      const message = event.data;
-      handleMessage(message);
-    };
-
-    newWs.onclose = () => {
-      console.log("WebSocket closed, attempting to reconnect...");
-      // Attempt to reconnect
-      setTimeout(() => {
-        setWs(new WebSocket("ws://localhost:5000/"));
-      }, 5000);
-    };
-
-    return () => {
-      newWs.close();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (randomTimes.length > 0) {
-      const newRandomTime = randomTimes[randomTimes.length - 1].time;
-      const newValue = startMultiplying(
-        newRandomTime,
-        setCurrentValue,
-        addResultToHistory
-      );
-      setRandomTimes((prevRandomTimes) => [...prevRandomTimes, newValue]);
-    }
-  }, [randomTimes]);
-
-  const handleMessage = (message) => {
-    if (message.startsWith("{")) {
       try {
-        const parsedMessage = JSON.parse(message);
-        switch (parsedMessage.type) {
-          case "plane-countdown-start":
-            setRandomTimeCountdown(parsedMessage.time);
-            startMultiplying(
-              parsedMessage.time,
-              setCurrentValue,
-              addResultToHistory
-            );
-            break;
-          case "countdown-nearing-end":
-            break;
-          case "countdown-end":
-            setShowCountdown(false);
-            setPlaneTookOff(true);
-            document
-              .getElementById("fighter-jet-image")
-              .classList.remove("plane_flying");
-            document
-              .getElementById("fighter-jet-image")
-              .classList.add("plane_take_off", "plane_visibility");
-
-            setTimeout(() => {
-              setPlaneTookOff(false);
-              setShowCountdown(true);
-              setIsBetPlaced(false);
-              setIsCashOut(false);
-              setCountdown(10);
-            }, 3000);
-            break;
-          default:
-            break;
+        const response = await fetch(
+          `${process.env.REACT_APP_BETRECORDS_URL}/${userProfile._id}?gameType=${gameType}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch bet records");
         }
+        const data = await response.json();
+        console.log("Fetched bet records:", data);
+        setBetRecords(data);
       } catch (error) {
-        console.error("Error parsing JSON message:", error);
+        console.error("Error fetching bet records:", error);
       }
-    } else {
-      console.log("Received message:", message);
-    }
-  };
+    };
 
-  useEffect(() => {
-    console.log("Initial userProfile state:", userProfile);
-  }, [userProfile]);
+    fetchBetRecords();
+  }, [userProfile, gameType]);
 
-  useEffect(() => {
-    const countdownTimer = setInterval(() => {
-      if (countdown > 0) {
-        setCountdown((prevCountdown) => prevCountdown - 1);
-      } else {
-        setShowCountdown(false);
-        clearInterval(countdownTimer);
-      }
-    }, 1000);
-
-    return () => clearInterval(countdownTimer);
-  }, [countdown]);
-
-  const handleInputChange = (event) => {
-    const inputBetAmount = parseFloat(event.target.value);
-    setBetAmount(inputBetAmount);
-  };
-
-  useEffect(() => {
-    if (isBetPlaced) {
-      setWinningAmount(parseFloat(currentValue) * betAmount);
-    }
-  }, [currentValue, betAmount, isBetPlaced]);
-
-  const placeBet = async () => {
-    if (!showCountdown) {
-      console.log("You cannot place a bet while the plane is flying.");
+  // Function to handle color change and bet outcome
+  const changeColor = async () => {
+    if (!isBetPlaced) {
+      setAlertMessage("Please place a bet first!");
+      setTimeout(() => {
+        setAlertMessage(null);
+      }, 4000);
       return;
     }
 
+    // Reset background colors
+    document.querySelectorAll(".feature").forEach((box) => {
+      box.style.backgroundColor = "";
+    });
+    console.log("Colors reset");
+
+    try {
+      const response = await fetch(process.env.REACT_APP_COLOR_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+      const { randomNumber, color } = data;
+
+      console.log("Random Number:", randomNumber);
+
+      // Set background color based on random number
+      document.getElementById(`color-${randomNumber}`).style.backgroundColor =
+        color;
+
+      // Check if the corresponding radio button is checked
+      if (selectedBox === randomNumber) {
+        setAlertMessage("You won!");
+        const winningPoints = betAmount * 2;
+
+        // Update user profile points
+        setUserProfile((prevProfile) => ({
+          ...prevProfile,
+          points: prevProfile.points + winningPoints,
+        }));
+        await addUserPoints(winningPoints);
+
+        // Prepare new bet record
+        const newRecord = {
+          user_id: userProfile._id,
+          bet_amount: betAmount,
+          box_number: selectedBox,
+          cashout_amount: winningPoints,
+          gameType,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Update betRecords state with new record
+        setBetRecords((prevRecords) => [...prevRecords, newRecord]);
+
+        // Save bet record
+        await saveBetRecord(newRecord);
+      } else {
+        setAlertMessage("You lost!");
+
+        // Prepare new bet record for loss
+        const newRecord = {
+          user_id: userProfile._id,
+          bet_amount: betAmount,
+          box_number: selectedBox,
+          cashout_amount: 0,
+          gameType,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Update betRecords state with new record
+        setBetRecords((prevRecords) => [...prevRecords, newRecord]);
+
+        // Save bet record
+        await saveBetRecord(newRecord);
+      }
+
+      setIsBetPlaced(false);
+      setIsPlaceBetButtonDisabled(false); // Re-enable "Place Bet" button
+    } catch (error) {
+      console.error("There was a problem with the fetch operation:", error);
+      setAlertMessage("An error occurred. Please try again.");
+    }
+
+    setIsCheckButtonEnabled(false);
+  };
+
+  // Function to handle radio button change
+  const handleRadioChange = (event) => {
+    setSelectedBox(Number(event.target.value));
+    setIsCheckButtonEnabled(true); // Enable check button after radio button selection
+  };
+
+  // Function to close alert message
+  const closeAlert = () => {
+    setAlertMessage(null); // Reset alert message
+  };
+
+  // Function to place a bet
+  const placeBet = async () => {
     const initialBetAmount = parseFloat(betAmount);
     if (
       isNaN(initialBetAmount) ||
       initialBetAmount <= 9 ||
       initialBetAmount > userProfile.points
     ) {
-      setAlert("Invalid bet amount or insufficient points");
+      setAlertMessage("Invalid bet amount or insufficient points");
       setTimeout(() => {
-        setAlert(null);
+        setAlertMessage(null);
       }, 4000);
       return;
     }
 
+    // Update bet amount and user points
     setBetAmount(initialBetAmount);
     const updatedPoints = userProfile.points - initialBetAmount;
     setUserProfile({ ...userProfile, points: updatedPoints });
     setIsBetPlaced(true);
-    setAlert("Bet placed successfully!");
+    setAlertMessage("Bet placed successfully!");
     await addUserPoints(-initialBetAmount);
     setTimeout(() => {
-      setAlert(null);
+      setAlertMessage(null);
     }, 2000);
+    setIsPlaceBetButtonDisabled(true); // Disable "Place Bet" button
   };
 
-  const cashOut = async () => {
-    if (isBetPlaced && !planeTookOff) {
-      const parsedCurrentValue = parseFloat(currentValue);
-      const parsedBetAmount = parseFloat(betAmount);
-
-      if (isNaN(parsedCurrentValue)) {
-        console.error("Invalid multiplier");
-        return;
+  // Function to save a bet record
+  const saveBetRecord = async (newRecord) => {
+    try {
+      const response = await fetch(process.env.REACT_APP_BETRECORDS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newRecord),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to save bet record");
       }
-
-      if (isNaN(parsedBetAmount)) {
-        console.error("Invalid bet amount");
-        return;
-      }
-
-      let calculatedWinningAmount = parsedCurrentValue * parsedBetAmount;
-      calculatedWinningAmount = parseFloat(calculatedWinningAmount.toFixed(2)); // Round to two decimal places
-
-      setWinningAmount(calculatedWinningAmount);
-
-      const updatedPoints = parseFloat(
-        (userProfile.points + calculatedWinningAmount).toFixed(2)
-      ); // Round to two decimal places
-      setUserProfile({ ...userProfile, points: updatedPoints });
-
-      await addUserPoints(calculatedWinningAmount);
-
-      setBetAmount(10);
-      setIsBetPlaced(false);
-      setIsCashOut(true); // Set cash out state to true
-
-      try {
-        console.log("Cashing out for user:", userProfile._id);
-
-        const response = await fetch("http://localhost:5000/api/bet-records", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_id: userProfile._id,
-            bet_amount: parsedBetAmount,
-            multiplier: parsedCurrentValue,
-            cashout_amount: calculatedWinningAmount,
-          }),
-        });
-        const data = await response.json();
-        console.log("Cashout record added:", data); // Log response
-
-        // Fetch updated bet records
-        fetchBetRecords(userProfile._id);
-      } catch (error) {
-        console.error("Error cashing out:", error);
-      }
-    } else {
-      setAlert("Cannot cash out after the plane has flown away");
-      setTimeout(() => {
-        setAlert(null);
-      }, 2000);
+      await response.json();
+    } catch (error) {
+      console.error("Error saving bet record:", error);
     }
-  };
-
-  useEffect(() => {
-    const addBetRecord = async () => {
-      console.log(
-        "Inside addBetRecord. isBetPlaced:",
-        isBetPlaced,
-        "planeTookOff:",
-        planeTookOff,
-        "isCashOut:",
-        isCashOut
-      );
-      if (isBetPlaced && planeTookOff && !isCashOut) {
-        try {
-          const parsedCurrentValue = parseFloat(currentValue);
-          const parsedBetAmount = parseFloat(betAmount);
-          console.log("Cashing out for user:", userProfile._id);
-
-          const response = await fetch(
-            "http://localhost:5000/api/bet-records",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                user_id: userProfile._id,
-                bet_amount: parsedBetAmount,
-                multiplier: parsedCurrentValue,
-                cashout_amount: 0,
-              }),
-            }
-          );
-          const data = await response.json();
-          console.log("Cashout record added:", data); // Log response
-
-          // Fetch updated bet records
-          fetchBetRecords(userProfile._id);
-        } catch (error) {
-          console.error("Error cashing out:", error);
-        }
-      }
-    };
-
-    addBetRecord();
-  }, [isBetPlaced, isCashOut, planeTookOff]);
-
-  const isJetFlying = !showCountdown;
-  const addResultToHistory = (result) => {
-    setHistory((prevHistory) => {
-      const newHistory = [...prevHistory, result];
-      return newHistory.slice(-15); // Keep only the last 15 elements
-    });
   };
 
   return (
     <ProfileContext.Provider value={{ userProfile, setUserProfile }}>
-      <>
-        <div className="container-fluid py-3 bg-info d-flex justify-content-between resp-container">
-          <div className="container-fluid py-3 d-flex justify-content-between">
-            <div className="container-sm d-flex justify-content-start">
-              <a className="navbar-brand" href="#">
-                Logo
-              </a>
+      <Navbar_s />
+      <hr />
+      <h5 className="d-flex justify-content-center">
+        Which box will change its color...?
+      </h5>
+      <hr />
+      <div className="container-lg">
+        <div className="d-flex justify-content-center">
+          {[...Array(5)].map((_, index) => (
+            <div key={index}>
+              <div id={`color-${index + 1}`} className="feature">
+                {index + 1}
+              </div>
+              <input
+                type="radio"
+                name="box"
+                value={index + 1}
+                onChange={handleRadioChange}
+              />
             </div>
-            <div className="container-sm d-flex justify-content-around resp-container">
-              <a className="navbar-brand" href="#">
-                {userProfile && (
-                  <>
-                    <h5> Available Points: {userProfile.points} </h5>
-                  </>
-                )}
-              </a>
-              <a className="navbar-brand" href="/recharge">
-                <button type="button" className="btn btn-outline-primary">
-                  Add Points
-                </button>
-              </a>
-              <a className="navbar-brand" href="#">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#exampleModal"
-                >
-                  <i className="fa-solid fa-question"></i>
-                </button>
-                <div
-                  className="modal fade"
-                  id="exampleModal"
-                  tabIndex="-1"
-                  aria-labelledby="exampleModalLabel"
-                  aria-hidden="true"
-                >
-                  <div className="modal-dialog modal-dialog-scrollable">
-                    <div className="modal-content" style={{ width: "auto" }}>
-                      <div className="modal-header">
-                        <h1 className="modal-title fs-2" id="exampleModalLabel">
-                          Rules of Game
-                        </h1>
-                        <button
-                          type="button"
-                          className="btn-close"
-                          data-bs-dismiss="modal"
-                          aria-label="Close"
-                        ></button>
-                      </div>
-                      <div
-                        className="modal-body"
-                        style={{ height: "400px", overflowX: "auto" }} // Change overflowY to "auto"
-                      >
-                        <div className="container-fluid">
-                          3 minutes 1 issue, 2 minutes and 30 <br /> seconds to
-                          number <br /> you selected, you will get (98*9) 882
-                        </div>
-                      </div>
-                      <div className="modal-footer">
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          data-bs-dismiss="modal"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </a>
-            </div>
-          </div>
+          ))}
         </div>
-
-        <div className="card text-center">
-          <div className="card-header">
-            <div className="accordion" id="accordionExample">
-              <div className="accordion-item">
-                <h2 className="accordion-header">
-                  <button
-                    className="accordion-button collapsed"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#collapseTwo"
-                    aria-expanded="false"
-                    aria-controls="collapseTwo"
-                  >
-                    <strong>History</strong>
-                  </button>
-                </h2>
-                <div
-                  id="collapseTwo"
-                  className="accordion-collapse collapse"
-                  data-bs-parent="#accordionExample"
-                >
-                  <div className="accordion-body d-flex flex-wrap">
-                    {history.map((result, index) => (
-                      <p key={index} className="me-3 random-time">
-                        {result}x
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="card-header">Featured</div>
+        {alertMessage && (
           <div
-            className={`card-body bg-dark resp-aviator ${
-              !showCountdown && !planeTookOff ? "bg-animation" : ""
-            }`}
-            style={{
-              height: "500px",
-              backgroundImage: `url(${bganimation})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
+            className="alert alert-warning alert-dismissible fade show mt-3"
+            role="alert"
           >
-            <div className="container-sm">
-              {showCountdown && ( // Render the blade image and countdown only if showCountdown is true
-                <>
-                  <img
-                    src={bladeImage}
-                    alt="fanImage"
-                    className="blade-image"
-                    style={{
-                      width: "100px",
-                      height: "auto",
-                      borderRadius: "10px",
-                      color: "white",
-                    }}
-                  />
-                  <h5 className="text-light my-3">Waiting for Next Fly</h5>
-                  <span className={`my-3 text-warning countdown-animation`}>
-                    Countdown: {countdown} seconds
-                  </span>
-                </>
-              )}
-              {planeTookOff && ( // Render the message when the plane takes off
-                <span className="text-warning fs-1 text">
-                  <h2> Flew Away</h2>
-                </span>
-              )}
-              {!showCountdown && (
-                <div className="countdown-container">
-                  <div className="random-countdown">
-                    <span className="text-warning fs-1 text">
-                      {currentValue !== null && currentValue}
-                      {/* Display the current multiplication value */}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-            <img
-              id="fighter-jet-image"
-              src={fighterJetImage}
-              alt="Fighter Jet"
-              className={`fighter-jet-image   ${
-                isJetFlying ? "plane_flying" : ""
-              }`}
-              style={{
-                width: "200px",
-                height: "auto",
-                borderRadius: "10px",
-              }}
-            />
-            {/* Cashout button (conditionally rendered) */}
-            {isBetPlaced && !showCountdown && (
-              <button
-                className="btn btn-secondary cashout-btn"
-                type="button"
-                onClick={cashOut} // Add onClick event handler for cashing out
-              >
-                <div>
-                  Cash Amount: <br />
-                  {winningAmount.toFixed(2)}
-                </div>
-              </button>
-            )}
+            {alertMessage}
+            <button
+              type="button"
+              className="btn-close"
+              data-bs-dismiss="alert"
+              aria-label="Close"
+              onClick={closeAlert}
+            ></button>
           </div>
-          {/* // JSX for rendering the alert */}
-          {alert && (
-            <div
-              className="alert alert-warning alert-dismissible fade show"
-              role="alert"
-            >
-              {alert}
-              <button
-                type="button"
-                className="btn-close"
-                data-bs-dismiss="alert"
-                aria-label="Close"
-              ></button>
-            </div>
-          )}
-          <div className="container-fluid">
-            <div className="d-flex justify-content-between align-items-center">
-              <div className="  px-5 py-1 my-3">
-                <div className="input-group px-5 py-1 my-3">
-                  <span className="input-group-text  py-1 " id="basic-addon3">
-                    <h4> Enter Amount </h4>
-                  </span>
-                  <input
-                    type="number"
-                    value={betAmount}
-                    onChange={handleInputChange}
-                    placeholder="Enter bet amount"
-                    disabled={!showCountdown || isBetPlaced} // Disable input if countdown is not shown or bet is already placed
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="d-grid gap-1">
+        )}
+
+        <div class="card-body mx-3 my-3 d-flex justify-content-center align-items-center">
+          <div class="d-flex justify-content-center align-items-center">
+            <div className="input-group px-1 py-1 my-1">
+              <span className="input-group-text" id="basic-addon3">
+                <h5> Enter Amount </h5>
+              </span>
+              <input
+                type="number"
+                value={betAmount}
+                onChange={(e) => setBetAmount(e.target.value)}
+                placeholder="Enter bet amount"
+              />
               <button
                 type="button"
                 className="btn btn-primary"
                 onClick={placeBet}
-                disabled={!showCountdown || isBetPlaced} // Disable button if countdown is not shown or bet is already placed
+                disabled={isPlaceBetButtonDisabled} // Disable button conditionally
               >
                 Place Bet
               </button>
             </div>
           </div>
-          <div className="card-footer text-body-secondary my-3">My Record</div>
-          <table className="table">
-            <thead>
-              <tr>
-                <th scope="col">Period</th>
-                <th scope="col">Bet</th>
-                <th scope="col">Multi.</th>
-                <th scope="col">Cashout</th>
-              </tr>
-            </thead>
-            <tbody>
-              {betRecords.length > 0 ? (
-                betRecords.map((record, index) => {
-                  function formatDate(date) {
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, "0");
-                    const day = String(date.getDate()).padStart(2, "0");
-                    const hours = String(date.getHours()).padStart(2, "0");
-                    const minutes = String(date.getMinutes()).padStart(2, "0");
-                    return `${year}${month}${day}${hours}${minutes}`;
-                  }
-
-                  const createdAtDate = new Date(record.createdAt);
-                  const formattedDate = formatDate(createdAtDate);
-                  return (
-                    <tr key={index}>
-                      <td>{formattedDate}</td>
-                      <td>{record.bet_amount}</td>
-                      <td>{record.multiplier}</td>
-                      <td>{record.cashout_amount}</td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan="4">No bet records found</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
-      </>
+
+        <div class="card">
+          <div class="card-body">
+            <div className="d-flex justify-content-center">
+              <button
+                type="button"
+                className="btn btn-secondary my-3 mx-5"
+                id="checkButton"
+                onClick={changeColor}
+                disabled={!isCheckButtonEnabled || !isBetPlaced}
+              >
+                Check
+              </button>
+            </div>{" "}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header d-flex justify-content-center">
+            <h5>My Record</h5>
+          </div>
+          <div class="card-body">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th scope="col">Period</th>
+                  <th scope="col">Bet</th>
+                  <th scope="col">Box.NO.</th>
+                  <th scope="col">Cashout</th>
+                </tr>
+              </thead>
+              <tbody>
+                {betRecords.length > 0 ? (
+                  betRecords.map((record, index) => {
+                    const formatDate = (dateString) => {
+                      const date = new Date(dateString);
+                      const year = date.getFullYear();
+                      const month = String(date.getMonth() + 1).padStart(
+                        2,
+                        "0"
+                      );
+                      const day = String(date.getDate()).padStart(2, "0");
+                      const hours = String(date.getHours()).padStart(2, "0");
+                      const minutes = String(date.getMinutes()).padStart(
+                        2,
+                        "0"
+                      );
+                      return `${year}${month}${day}${hours}${minutes}`;
+                    };
+
+                    const formattedDate = formatDate(record.createdAt);
+                    return (
+                      <tr key={index}>
+                        <td>{formattedDate}</td>
+                        <td>{record.bet_amount}</td>
+                        <td>{record.box_number}</td>
+                        <td>{record.cashout_amount}</td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="4">No bet records found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </ProfileContext.Provider>
   );
 };
 
-export default Aviator;
+export default Color;

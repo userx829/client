@@ -1,26 +1,32 @@
- 
-import React from "react";
-import { useState, useEffect, useRef } from "react"; // Example React hooks
-import { ProfileContext, useProfileData } from "../ProfileContext"; // Example context and custom hook
-import fighterJetImage from "./pngtree-fighter-jet-military-plane-vector-png-image_6457507.png"; // Example image import
-import bladeImage from "./images-removebg-preview.png"; // Another example image import
-import bganimation from "./HD-wallpaper-grid-yellow-grid-abstract-artist-artwork-digital-art-deviantart-dark-black-thumbnail.jpg"; // Another example image import
-import countdownSound from "./flyingsound.mp3"; // Example audio import
-import takeoffSound from "./takeoffsound.mp3"; // Another example audio import
+import React, { useState, useEffect, useRef,useContext } from "react";
+import { ProfileContext, useProfileData } from "../context/ProfileContext";
+import { HeaderColorContext, HeaderColorProvider } from "../context/HeaderColorContext";
+import { RulesContext, RulesProvider } from "../context/RulesContext";
+import fighterJetImage from "./pngtree-fighter-jet-military-plane-vector-png-image_6457507.png";
+import bladeImage from "./images-removebg-preview.png";
+import bganimation from "./HD-wallpaper-grid-yellow-grid-abstract-artist-artwork-digital-art-deviantart-dark-black-thumbnail.jpg";
+import countdownSound from "./flyingsound.mp3";
+import takeoffSound from "./takeoffsound.mp3";
 
 export {
   React,
   useState,
   useEffect,
   useRef,
+  useContext,
   ProfileContext,
   useProfileData,
+  HeaderColorContext,
+  HeaderColorProvider,
+  RulesContext,
+  RulesProvider,
   fighterJetImage,
   bladeImage,
   bganimation,
   countdownSound,
   takeoffSound,
 };
+
 
   // const countdownAudioRef = useRef(null);
   // const takeoffAudioRef = useRef(null);

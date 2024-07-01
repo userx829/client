@@ -1,0 +1,5 @@
+@media (max-width: 676px) {
+  .navbar-logo {
+    display: none !important;
+  }
+}

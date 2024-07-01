@@ -1,4 +1,3 @@
-// TimerContext.js
 import React, { createContext, useState, useContext, useEffect } from "react";
 
 const TimerContext = createContext();
@@ -17,10 +16,11 @@ export const TimerProvider = ({ children }) => {
     const timer = setInterval(() => {
       if (countdown.seconds === 0) {
         if (countdown.minutes === 0) {
-          clearInterval(timer);
-          return;
+          // Reset the countdown when it reaches zero
+          setCountdown({ minutes: 1, seconds: 0 });
+        } else {
+          setCountdown({ minutes: countdown.minutes - 1, seconds: 59 });
         }
-        setCountdown({ minutes: countdown.minutes - 1, seconds: 59 });
       } else {
         setCountdown({ ...countdown, seconds: countdown.seconds - 1 });
       }

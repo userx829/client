@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useTimer } from "../TimerContext"; // Make sure to import TimerContext and useTimer
+import { useTimer } from "../context/TimerContext"; // Make sure to import TimerContext and useTimer
 import JoinModal from "./JoinModal";
 import NumberModal from "./NumberModal";
-import { ProfileContext, useProfileData } from "../ProfileContext"; // Import ProfileContext and useProfileData
+import { ProfileContext, useProfileData } from "../context/ProfileContext"; // Import ProfileContext and useProfileData
+import Navbar_s from "./Navbar_s";
+
 
 function ColorGame(color) {
   const {
@@ -95,115 +97,8 @@ function ColorGame(color) {
              }
           }`}
         </style>
-        <div className="container-fluid py-2 bg-warning-subtle d-flex justify-content-between">
-          <div className="container-fluid py-4 d-flex justify-content-between flex-column flex-sm-row align-items-start">
-            <div className="container-sm d-flex justify-content-start">
-              <h3>Win</h3>
-            </div>
-            <div className="container-sm d-flex justify-content-around">
-              <a className="navbar-brand my-1" href="#">
-                {userProfile && (
-                  <>
-                    <h5> Available Points: {userProfile.points} </h5>
-                    {/* Display available points */}
-                  </>
-                )}
-              </a>
-              <a className="navbar-brand" href="/recharge">
-                <button type="button" className="btn btn-outline-primary">
-                  Add Points
-                </button>
-              </a>
-              <a className="navbar-brand" href="#">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#exampleModal"
-                >
-                  <i className="fa-solid fa-question"></i>
-                </button>
+        <Navbar_s/>
 
-                <div
-                  className="modal fade"
-                  id="exampleModal"
-                  tabIndex="-1"
-                  aria-labelledby="exampleModalLabel"
-                  aria-hidden="true"
-                >
-                  <div className="modal-dialog modal-dialog-scrollable">
-                    <div className="modal-content" style={{ width: "auto" }}>
-                      <div className="modal-header">
-                        <h1 className="modal-title fs-2" id="exampleModalLabel">
-                          Rules of Game
-                        </h1>
-                        <button
-                          type="button"
-                          className="btn-close"
-                          data-bs-dismiss="modal"
-                          aria-label="Close"
-                        ></button>
-                      </div>
-                      <div
-                        className="modal-body"
-                        style={{ maxHeight: "400px", overflowY: "auto" }}
-                      >
-                        <div className="container-fluid">
-                          <p>
-                            3 minutes 1 issue, 2 minutes and 30 seconds to
-                            order,
-                            <br />
-                            30 seconds to show the lottery result. It opens all
-                            day. <br /> The total number of trade is 480 issues{" "}
-                          </p>{" "}
-                          <p>
-                            If you spend 100 to trade, after deducting 2 service
-                            fee,
-                            <br /> your contract amount is 98:{" "}
-                          </p>
-                          <p>
-                            {" "}
-                            1. JOIN GREEN: if the result shows 1,3,7,9,
-                            <br /> you will get (98*2) 196 . <br />
-                            If the result shows 5, you will get (98*1.5) 147{" "}
-                          </p>
-                          <p>
-                            {" "}
-                            2. JOIN RED: if the result shows 2,4,6,8,
-                            <br /> you will get (98*2) 196;
-                            <br /> If the result shows 0, you will get (98*1.5)
-                            147{" "}
-                          </p>
-                          <p>
-                            {" "}
-                            3. JOIN VIOLET: if the result shows 0 or 5, <br />
-                            you will get (98*4.5) 441{" "}
-                          </p>
-                          <p>
-                            {" "}
-                            4. SELECT NUMBER: if the result is the same as the
-                            <br />
-                            number you selected, you will get (98*9) 882{" "}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="modal-footer">
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          data-bs-dismiss="modal"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </a>
-            </div>
-          </div>
-        </div>
         <div className="card text-center">
           <div className="card-header">Emerd</div>
           <div className="card-body d-flex justify-content-between">

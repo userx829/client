@@ -1,17 +1,16 @@
-// Import statements for components
 import {
   React,
   useState,
   useEffect,
-  useRef,
+  useContext,
   ProfileContext,
   useProfileData,
   fighterJetImage,
   bladeImage,
   bganimation,
-  countdownSound,
-  takeoffSound,
 } from "./CommonImports";
+import Navbar_s from "./Navbar_s";
+import { WebSocketContext } from "../context/WebSocketContext";
 
 import "./Aviator.css";
 
@@ -45,14 +44,21 @@ function startMultiplying(newRandomTime, setCurrentValue, addResultToHistory) {
 }
 
 const Aviator = () => {
-  const [countdown, setCountdown] = useState(10);
-  const [showCountdown, setShowCountdown] = useState(true);
+  const {
+    ws,
+    setWs,
+    countdown,
+    setCountdown,
+    showCountdown,
+    setShowCountdown,
+    currentValue,
+    setCurrentValue,
+    planeTookOff,
+    setPlaneTookOff,
+  } = useContext(WebSocketContext);
   const [randomTimes, setRandomTimes] = useState([]);
   const [randomTimeCountdown, setRandomTimeCountdown] = useState(null);
-  const [planeTookOff, setPlaneTookOff] = useState(false);
-  const [ws, setWs] = useState(null);
   const [alert, setAlert] = useState(null);
-  const [currentValue, setCurrentValue] = useState(1);
   const [betAmount, setBetAmount] = useState(10);
   const [isCashOut, setIsCashOut] = useState(false);
   const [isBetPlaced, setIsBetPlaced] = useState(false);
@@ -68,11 +74,14 @@ const Aviator = () => {
     }
   }, [userDetails]);
 
+  const gameType = "aviatorGame"; // Set the game type
+
   useEffect(() => {
     if (userProfile && userProfile._id) {
       fetchBetRecords(userProfile._id);
     }
   }, [userProfile]);
+
   const fetchBetRecords = async (userId) => {
     if (!userId) {
       console.error("User ID is undefined in fetchBetRecords");
@@ -80,7 +89,7 @@ const Aviator = () => {
     }
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_BETRECORDS_URL}/${userId}`
+        `${process.env.REACT_APP_BETRECORDS_URL}/${userId}?gameType=${gameType}`
       );
       const data = await response.json();
       console.log("Fetched bet records:", data);
@@ -89,17 +98,17 @@ const Aviator = () => {
       console.error("Error fetching bet records:", error);
     }
   };
-  
+
   // WebSocket connection setup
   useEffect(() => {
     const newWs = new WebSocket(process.env.REACT_APP_WEBSOCKET_URL);
     setWs(newWs);
-  
+
     newWs.onmessage = (event) => {
       const message = event.data;
       handleMessage(message);
     };
-  
+
     newWs.onclose = () => {
       console.log("WebSocket closed, attempting to reconnect...");
       // Attempt to reconnect
@@ -107,12 +116,11 @@ const Aviator = () => {
         setWs(new WebSocket(process.env.REACT_APP_WEBSOCKET_URL));
       }, 5000);
     };
-  
+
     return () => {
       newWs.close();
     };
   }, []);
-  
 
   useEffect(() => {
     if (randomTimes.length > 0) {
@@ -131,8 +139,11 @@ const Aviator = () => {
       try {
         const parsedMessage = JSON.parse(message);
         switch (parsedMessage.type) {
+          case "countdown-update":
+            setCountdown(parsedMessage.time);
+            break;
           case "plane-countdown-start":
-            setRandomTimeCountdown(parsedMessage.time);
+            setShowCountdown(false);
             startMultiplying(
               parsedMessage.time,
               setCurrentValue,
@@ -170,22 +181,11 @@ const Aviator = () => {
     }
   };
 
+
   useEffect(() => {
     console.log("Initial userProfile state:", userProfile);
   }, [userProfile]);
 
-  useEffect(() => {
-    const countdownTimer = setInterval(() => {
-      if (countdown > 0) {
-        setCountdown((prevCountdown) => prevCountdown - 1);
-      } else {
-        setShowCountdown(false);
-        clearInterval(countdownTimer);
-      }
-    }, 1000);
-
-    return () => clearInterval(countdownTimer);
-  }, [countdown]);
 
   const handleInputChange = (event) => {
     const inputBetAmount = parseFloat(event.target.value);
@@ -262,7 +262,7 @@ const Aviator = () => {
       try {
         console.log("Cashing out for user:", userProfile._id);
 
-        const response = await fetch("http://localhost:5000/api/bet-records", {
+        const response = await fetch(process.env.REACT_APP_BETRECORDS_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -272,6 +272,7 @@ const Aviator = () => {
             bet_amount: parsedBetAmount,
             multiplier: parsedCurrentValue,
             cashout_amount: calculatedWinningAmount,
+            gameType,
           }),
         });
         const data = await response.json();
@@ -306,21 +307,20 @@ const Aviator = () => {
           const parsedBetAmount = parseFloat(betAmount);
           console.log("Cashing out for user:", userProfile._id);
 
-          const response = await fetch(
-            "http://localhost:5000/api/bet-records",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                user_id: userProfile._id,
-                bet_amount: parsedBetAmount,
-                multiplier: parsedCurrentValue,
-                cashout_amount: 0,
-              }),
-            }
-          );
+          const response = await fetch(process.env.REACT_APP_BETRECORDS_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              user_id: userProfile._id,
+              bet_amount: parsedBetAmount,
+              multiplier: parsedCurrentValue,
+              cashout_amount: 0,
+              gameType,
+
+            }),
+          });
           const data = await response.json();
           console.log("Cashout record added:", data); // Log response
 
@@ -334,95 +334,21 @@ const Aviator = () => {
 
     addBetRecord();
   }, [isBetPlaced, isCashOut, planeTookOff]);
-
   const isJetFlying = !showCountdown;
+
+
+  useEffect(() => {
+    console.log("Random times:", randomTimes);
+  }, [randomTimes]);
+
   const addResultToHistory = (result) => {
-    setHistory((prevHistory) => {
-      const newHistory = [...prevHistory, result];
-      return newHistory.slice(-10); // Keep only the last 15 elements
-    });
+    setHistory((prevHistory) => [result, ...prevHistory].slice(0, 10)); // Keep only the latest 10 results
   };
 
   return (
     <ProfileContext.Provider value={{ userProfile, setUserProfile }}>
       <>
-        <div className="container-fluid py-3 bg-info d-flex justify-content-between resp-container">
-          <div className="container-fluid py-3 d-flex justify-content-between">
-            <div className="container-sm d-flex justify-content-start">
-              <a className="navbar-brand" href="#">
-                Logo
-              </a>
-            </div>
-            <div className="container-sm d-flex justify-content-around resp-container">
-              <a className="navbar-brand" href="#">
-                {userProfile && (
-                  <>
-                    <span className="fs-5 text fw-semibold">
-                      Available Points: {userProfile.points}{" "}
-                    </span>
-                  </>
-                )}
-              </a>
-              <a className="navbar-brand" href="/recharge">
-                <button type="button" className="btn btn-outline-primary">
-                  Add Points
-                </button>
-              </a>
-              <a className="navbar-brand" href="#">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#exampleModal"
-                >
-                  <i className="fa-solid fa-question"></i>
-                </button>
-                <div
-                  className="modal fade"
-                  id="exampleModal"
-                  tabIndex="-1"
-                  aria-labelledby="exampleModalLabel"
-                  aria-hidden="true"
-                >
-                  <div className="modal-dialog modal-dialog-scrollable">
-                    <div className="modal-content" style={{ width: "auto" }}>
-                      <div className="modal-header">
-                        <h1 className="modal-title fs-2" id="exampleModalLabel">
-                          Rules of Game
-                        </h1>
-                        <button
-                          type="button"
-                          className="btn-close"
-                          data-bs-dismiss="modal"
-                          aria-label="Close"
-                        ></button>
-                      </div>
-                      <div
-                        className="modal-body"
-                        style={{ height: "400px", overflowX: "auto" }} // Change overflowY to "auto"
-                      >
-                        <div className="container-fluid">
-                          3 minutes 1 issue, 2 minutes and 30 <br /> seconds to
-                          number <br /> you selected, you will get (98*9) 882
-                        </div>
-                      </div>
-                      <div className="modal-footer">
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          data-bs-dismiss="modal"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </a>
-            </div>
-          </div>
-        </div>
-
+        <Navbar_s />
         <div className="card text-center">
           <div className="card-header">
             <div className="accordion" id="accordionExample">
@@ -488,7 +414,9 @@ const Aviator = () => {
                 </>
               )}
               {planeTookOff && ( // Render the message when the plane takes off
-                <span className="text-warning fs-1 text">Flew Away</span>
+                <span className="text-warning fs-1 text">
+                  <h2> Flew Away</h2>
+                </span>
               )}
               {!showCountdown && (
                 <div className="countdown-container">

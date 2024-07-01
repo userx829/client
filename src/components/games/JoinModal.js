@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useTimer } from "../TimerContext";
+import { useTimer } from "../context/TimerContext";
 
 const placeBetApiCall = async (betType, betNumber) => {
   try {

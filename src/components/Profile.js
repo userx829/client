@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "./AuthContext"; // Import useAuth hook
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "./context/AuthContext"; // Import useAuth hook
 
 const Profile = () => {
   const [userDetails, setUserDetails] = useState(null);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { isLoggedIn, logout } = useAuth(); // Use useAuth hook to get isLoggedIn state and logout function
 
@@ -17,19 +18,21 @@ const Profile = () => {
             "x-auth-token": localStorage.getItem("token"),
           },
         });
+
         if (response.ok) {
           const userData = await response.json();
           setUserDetails(userData);
         } else {
-          // Handle error response
           if (response.status === 401) {
             logout(); // Logout if unauthorized
             navigate("/login");
+          } else {
+            setError("Failed to fetch user details.");
           }
         }
       } catch (error) {
         console.error("Error fetching user details:", error);
-        // Handle fetch error
+        setError("An error occurred while fetching user details.");
       }
     };
 
@@ -44,7 +47,6 @@ const Profile = () => {
   };
 
   if (!isLoggedIn) {
-    // If user is not logged in, no need to render the profile page
     return null;
   }
 
@@ -53,29 +55,31 @@ const Profile = () => {
       <nav className="navbar bg-body-tertiary">
         <div className="container-fluid">
           <span className="navbar-brand mb-0 h1">
-            <h3>Profile</h3>
+            Profile
           </span>
           <button className="btn btn-primary" onClick={handleLogout}>
             Logout
           </button>
         </div>
       </nav>
+      {error && <div className="alert alert-danger">{error}</div>}
       <div className="card">
         <div className="card-header bg-info-subtle">
           <h5>User Details</h5>
         </div>
         <div className="card-body d-flex flex-column justify-content-start">
-          <h5 className="card-title">Name: {userDetails?.name}</h5>
-          <p className="card-text">Email Id: {userDetails?.email}</p>
-          <p className="card-text">Phone: </p>
-          <p className="card-text">
-            {userDetails && (
-              <>
+          {userDetails ? (
+            <>
+              <h5 className="card-title">Name: {userDetails.name}</h5>
+              <p className="card-text">Email Id: {userDetails.email}</p>
+              <p className="card-text">Phone: {userDetails.phone || "N/A"}</p>
+              <p className="card-text">
                 Available Points: {userDetails.points}
-                {/* Display available points */}
-              </>
-            )}
-          </p>
+              </p>
+            </>
+          ) : (
+            <p>Loading user details...</p>
+          )}
         </div>
       </div>
       <div className="accordion accordion-flush" id="accordionFlushExample">
@@ -99,19 +103,19 @@ const Profile = () => {
           >
             <div className="accordion-body">
               <div className="list-group">
-                <a
-                  href="#"
+                <Link
+                  to="/recharge"
                   className="list-group-item list-group-item-action"
                   aria-current="true"
                 >
                   Recharge
-                </a>
-                <a href="#" className="list-group-item list-group-item-action">
+                </Link>
+                <Link to="#" className="list-group-item list-group-item-action">
                   Withdrawal
-                </a>
-                <a href="#" className="list-group-item list-group-item-action">
+                </Link>
+                <Link to="#" className="list-group-item list-group-item-action">
                   Transactions
-                </a>
+                </Link>
               </div>
             </div>
           </div>

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext } from "react";
-import { useTimer } from "../TimerContext";
+import { useTimer } from "../context/TimerContext";
 import JoinModal from "./JoinModal";
 import NumberModal from "./NumberModal";
+import Navbar_s from "./Navbar_s";
+
 import "./Aviator.css";
 
-import { ProfileContext, useProfileData } from "../ProfileContext";
+import { ProfileContext, useProfileData } from "../context/ProfileContext";
 
 function ColorGame() {
   const { countdown, updateCountdown, results, setResults } = useTimer();
@@ -74,76 +76,7 @@ function ColorGame() {
              }
           }`}
         </style>
-        <div className="container-fluid py-2 bg-warning-subtle d-flex justify-content-between">
-          <div className="container-fluid py-4 d-flex justify-content-between flex-column flex-sm-row align-items-start">
-            <div className="container-sm d-flex justify-content-start">
-              <h3>Win</h3>
-            </div>
-            <div className="container-sm d-flex justify-content-around">
-              <a className="navbar-brand my-1" href="#">
-                {userProfile && (
-                  <>
-                    <h5> Available Points: {userProfile.points} </h5>
-                    {/* Display available points */}
-                  </>
-                )}
-              </a>
-              <a className="navbar-brand" href="/recharge">
-                <button type="button" className="btn btn-outline-primary">
-                  Add Points
-                </button>
-              </a>
-              <a className="navbar-brand" href="#">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#exampleModal"
-                >
-                  <i className="fa-solid fa-question"></i>
-                </button>
-
-                <div
-                  className="modal fade"
-                  id="exampleModal"
-                  tabIndex="-1"
-                  aria-labelledby="exampleModalLabel"
-                  aria-hidden="true"
-                >
-                  <div className="modal-dialog modal-dialog-scrollable">
-                    <div className="modal-content" style={{ width: "auto" }}>
-                      <div className="modal-header">
-                        <h1 className="modal-title fs-2" id="exampleModalLabel">
-                          Rules of Game
-                        </h1>
-                        <button
-                          type="button"
-                          className="btn-close"
-                          data-bs-dismiss="modal"
-                          aria-label="Close"
-                        ></button>
-                      </div>
-                      <div
-                        className="modal-body"
-                        style={{ maxHeight: "400px", overflowY: "auto" }}
-                      ></div>
-
-                      <div className="modal-footer">
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          data-bs-dismiss="modal"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </a>
-            </div>
-          </div>
-        </div>
+        <Navbar_s/>
         <div className="card text-center">
           <div className="card-header">Emerd</div>
           <div className="card-body d-flex justify-content-between">
